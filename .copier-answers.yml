@@ -1,0 +1,18 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v4.5.1
+_src_path: https://github.com/jupyterlab/extension-template
+author_email: jupyter@googlegroups.com
+author_name: Project Jupyter
+create_claude_symlink: true
+create_gemini_symlink: false
+has_ai_rules: true
+has_binder: false
+has_settings: false
+kind: frontend-and-server
+labextension_name: '@jupyter-ai-contrib/braket'
+project_short_description: A Jupyter AI persona designed to assist AWS Braket users
+    on quantum computing tasks.
+python_name: jupyter_ai_braket
+repository: https://github.com/dlqqq/jupyter-ai-braket
+test: true
+
