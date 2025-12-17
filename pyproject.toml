@@ -1,5 +1,9 @@
 [build-system]
-requires = ["hatchling>=1.5.0", "jupyterlab>=4.0.0,<5", "hatch-nodejs-version>=0.3.2"]
+requires = [
+    "hatchling>=1.5.0",
+    "jupyterlab>=4.0.0,<5",
+    "hatch-nodejs-version>=0.3.2",
+]
 build-backend = "hatchling.build"
 
 [project]
@@ -23,20 +27,28 @@ classifiers = [
     "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
-    "jupyter_server>=2.4.0,<3"
+    "jupyter_server>=2.4.0,<3",
+    "jupyter_ai_persona_manager",
+    "langchain>=1.0.0",
+    "langchain_aws>=1.1.0",
+    "langchain_mcp_adapters",
+    "amazon_braket_sdk",
+    "qiskit",
+    "qiskit_braket_provider",
+    "matplotlib",
+    "numpy",
+    "loguru",
 ]
 dynamic = ["version", "description", "authors", "urls", "keywords"]
 
 [project.optional-dependencies]
-dev = [
-    "jupyterlab>=4",
-]
+dev = ["jupyterlab>=4"]
 test = [
     "coverage",
     "pytest",
     "pytest-asyncio",
     "pytest-cov",
-    "pytest-jupyter[server]>=0.6.0"
+    "pytest-jupyter[server]>=0.6.0",
 ]
 
 [tool.hatch.version]
@@ -83,9 +95,12 @@ version_cmd = "hatch version"
 before-build-npm = [
     "python -m pip install 'jupyterlab>=4.0.0,<5'",
     "jlpm",
-    "jlpm build:prod"
+    "jlpm build:prod",
 ]
 before-build-python = ["jlpm clean:all"]
 
 [tool.check-wheel-contents]
 ignore = ["W002"]
+
+[project.entry-points."jupyter_ai.personas"]
+braket = "jupyter_ai_braket.braket_persona:BraketPersona"
