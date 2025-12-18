@@ -141,66 +141,66 @@ def create_quantum_circuit(qasm_program: str, filename: Optional[str] = None) ->
         return {'error': str(e), 'success': False}
 
 
-@mcp.tool(name='run_quantum_task')
-def run_quantum_task(
-    circuit: Dict[str, Any],
-    device_arn: Optional[str] = None,
-    shots: int = 1000,
-    s3_bucket: Optional[str] = None,
-    s3_prefix: Optional[str] = None,
-) -> Dict[str, Any]:
-    """Run a quantum circuit on an Amazon Braket device.
+# @mcp.tool(name='run_quantum_task')
+# def run_quantum_task(
+#     circuit: Dict[str, Any],
+#     device_arn: Optional[str] = None,
+#     shots: int = 1000,
+#     s3_bucket: Optional[str] = None,
+#     s3_prefix: Optional[str] = None,
+# ) -> Dict[str, Any]:
+#     """Run a quantum circuit on an Amazon Braket device.
     
-    Args:
-        circuit: Quantum circuit definition
-        device_arn: ARN of the device to run the task on (optional, uses default if not provided)
-        shots: Number of shots to run
-        s3_bucket: S3 bucket for storing results (optional)
-        s3_prefix: S3 prefix for storing results (optional)
+#     Args:
+#         circuit: Quantum circuit definition
+#         device_arn: ARN of the device to run the task on (optional, uses default if not provided)
+#         shots: Number of shots to run
+#         s3_bucket: S3 bucket for storing results (optional)
+#         s3_prefix: S3 prefix for storing results (optional)
     
-    Returns:
-        Dictionary containing the task ID and status
-    """
-    try:
-        # Use default device ARN if none provided
-        if device_arn is None:
-            device_arn = get_default_device_arn()
-            logger.info(f"Using default device ARN: {device_arn}")
+#     Returns:
+#         Dictionary containing the task ID and status
+#     """
+#     try:
+#         # Use default device ARN if none provided
+#         if device_arn is None:
+#             device_arn = get_default_device_arn()
+#             logger.info(f"Using default device ARN: {device_arn}")
         
-        # Convert the circuit dictionary to a QuantumCircuit object
-        gate_objects = []
-        for gate_dict in circuit.get('gates', []):
-            gate = Gate(
-                name=gate_dict.get('name'),
-                qubits=gate_dict.get('qubits', []),
-                params=gate_dict.get('params'),
-            )
-            gate_objects.append(gate)
+#         # Convert the circuit dictionary to a QuantumCircuit object
+#         gate_objects = []
+#         for gate_dict in circuit.get('gates', []):
+#             gate = Gate(
+#                 name=gate_dict.get('name'),
+#                 qubits=gate_dict.get('qubits', []),
+#                 params=gate_dict.get('params'),
+#             )
+#             gate_objects.append(gate)
         
-        circuit_def = QuantumCircuit(
-            num_qubits=circuit.get('num_qubits'),
-            gates=gate_objects,
-            metadata=circuit.get('metadata'),
-        )
+#         circuit_def = QuantumCircuit(
+#             num_qubits=circuit.get('num_qubits'),
+#             gates=gate_objects,
+#             metadata=circuit.get('metadata'),
+#         )
         
-        # Run the quantum task
-        task_id = get_braket_service().run_quantum_task(
-            circuit=circuit_def,
-            device_arn=device_arn,
-            shots=shots,
-            s3_bucket=s3_bucket,
-            s3_prefix=s3_prefix,
-        )
+#         # Run the quantum task
+#         task_id = get_braket_service().run_quantum_task(
+#             circuit=circuit_def,
+#             device_arn=device_arn,
+#             shots=shots,
+#             s3_bucket=s3_bucket,
+#             s3_prefix=s3_prefix,
+#         )
         
-        return {
-            'task_id': task_id,
-            'status': 'CREATED',
-            'device_arn': device_arn,
-            'shots': shots,
-        }
-    except Exception as e:
-        logger.exception(f"Error running quantum task: {str(e)}")
-        return {'error': str(e)}
+#         return {
+#             'task_id': task_id,
+#             'status': 'CREATED',
+#             'device_arn': device_arn,
+#             'shots': shots,
+#         }
+#     except Exception as e:
+#         logger.exception(f"Error running quantum task: {str(e)}")
+#         return {'error': str(e)}
 
 
 @mcp.tool(name='get_task_result')
