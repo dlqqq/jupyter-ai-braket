@@ -34,6 +34,7 @@ dependencies = [
     "langchain_mcp_adapters",
     "amazon_braket_sdk",
     "qiskit",
+    "qiskit_qasm3_import",
     "qiskit_braket_provider",
     "matplotlib",
     "numpy",

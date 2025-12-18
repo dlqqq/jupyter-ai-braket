@@ -14,7 +14,10 @@
 import os
 import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Dict, List, Optional, Union, Any
+
+from qiskit import QuantumCircuit as QiskitCircuit, qasm3
 
 from .models import (
     QuantumCircuit,
@@ -80,42 +83,62 @@ def get_devices_resource() -> List[DeviceInfo]:
 
 
 @mcp.tool(name='create_quantum_circuit')
-def create_quantum_circuit(num_qubits: int, gates: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """Create a quantum circuit using Qiskit.
-    
+def create_quantum_circuit(qasm_program: str, filename: Optional[str] = None) -> Dict[str, Any]:
+    """Create a quantum circuit from an OpenQASM 3.0 program string.
+
     Args:
-        num_qubits: Number of qubits in the circuit
-        gates: List of gates to add to the circuit. Each gate is a dictionary with:
-            - name: Gate name (e.g., 'h', 'x', 'cx')
-            - qubits: List of qubit indices the gate acts on
-            - params: Optional parameters for parameterized gates (e.g., rotation angles)
-    
+        qasm_program: String containing the OpenQASM 3.0 program
+        filename: Optional filename for the .qasm file. If provided, the circuit is saved to this file.
+                  If not provided, the circuit is only verified and visualized without saving.
+
     Returns:
-        Dictionary containing the circuit definition and visualization
+        Dictionary containing the verification status, circuit diagram, and file path (if saved)
     """
     try:
-        # Convert gates to Gate objects
-        gate_objects = []
-        for gate_dict in gates:
-            gate_name = gate_dict.get('name')
-            gate_qubits = gate_dict.get('qubits', [])
-            gate_params = gate_dict.get('params')
-            
-            gate = Gate(name=gate_name, qubits=gate_qubits, params=gate_params)
-            gate_objects.append(gate)
-        
-        # Create the circuit definition
-        circuit_def = QuantumCircuit(num_qubits=num_qubits, gates=gate_objects)
-        
-        # Create visualization
-        response = get_braket_service().create_circuit_visualization(
-            circuit_def, "custom"
-        )
-        
+        # Verify the QASM 3.0 program by loading it with qiskit
+        logger.info("Verifying OpenQASM 3.0 program...")
+        circuit = qasm3.loads(qasm_program)
+        logger.info(f"Successfully verified circuit with {circuit.num_qubits} qubits and {len(circuit.data)} operations")
+
+        # Generate ASCII rendering of the circuit
+        logger.info("Generating circuit ASCII visualization...")
+        ascii_diagram = circuit.draw(output='text')
+
+        # Prepare base response
+        response = {
+            'success': True,
+            'num_qubits': circuit.num_qubits,
+            'num_operations': len(circuit.data),
+            'circuit_diagram': str(ascii_diagram),
+        }
+
+        # Save to file if filename is provided
+        if filename:
+            # Use current working directory
+            workspace_dir = Path(os.getcwd())
+
+            # Ensure the workspace directory exists
+            workspace_dir.mkdir(parents=True, exist_ok=True)
+
+            # Construct the full file path
+            file_path = workspace_dir / filename
+
+            # Save the QASM 3.0 code to the file
+            logger.info(f"Saving QASM 3.0 program to {file_path}...")
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(qasm_program)
+
+            logger.info(f"Successfully saved QASM 3.0 program to {file_path}")
+            response['file_path'] = str(file_path)
+            response['message'] = f'Circuit verified and saved to {file_path}'
+        else:
+            logger.info("No filename provided, skipping file save")
+            response['message'] = 'Circuit verified successfully (not saved to file)'
+
         return response
     except Exception as e:
         logger.exception(f"Error creating quantum circuit: {str(e)}")
-        return {'error': str(e)}
+        return {'error': str(e), 'success': False}
 
 
 @mcp.tool(name='run_quantum_task')
@@ -302,132 +325,141 @@ def search_quantum_tasks(
 
 
 @mcp.tool(name='create_bell_pair_circuit')
-def create_bell_pair_circuit() -> Dict[str, Any]:
+def create_bell_pair_circuit(filename: Optional[str] = None) -> Dict[str, Any]:
     """Create a Bell pair circuit (entangled qubits).
-    
+
+    Args:
+        filename: Optional filename for the .qasm file. If provided, the circuit is saved to this file.
+                  If not provided, the circuit is only verified and visualized without saving.
+
     Returns:
-        Dictionary containing the circuit definition and visualization
+        Dictionary containing the verification status, ASCII circuit diagram, and file path (if saved)
     """
     try:
-        # Convert to a circuit definition
-        circuit_def = QuantumCircuit(
-            num_qubits=2,
-            gates=[
-                Gate(name='h', qubits=[0]),
-                Gate(name='cx', qubits=[0, 1]),
-                Gate(name='measure_all'),
-            ],
-        )
-        
-        # Create visualization
-        response = get_braket_service().create_circuit_visualization(
-            circuit_def, "bell_pair"
-        )
-        
-        return response
+        # Create Bell pair circuit using Qiskit
+        circuit = QiskitCircuit(2)
+        circuit.h(0)  # Hadamard on qubit 0
+        circuit.cx(0, 1)  # CNOT with control=0, target=1
+        circuit.measure_all()  # Add measurements
+
+        # Convert to QASM 3.0
+        qasm_program = qasm3.dumps(circuit)
+
+        # Call create_quantum_circuit to verify and save
+        return create_quantum_circuit(qasm_program, filename)
     except Exception as e:
         logger.exception(f"Error creating Bell pair circuit: {str(e)}")
-        return {'error': str(e)}
+        return {'error': str(e), 'success': False}
 
 
 @mcp.tool(name='create_ghz_circuit')
-def create_ghz_circuit(num_qubits: int = 3) -> Dict[str, Any]:
+def create_ghz_circuit(filename: Optional[str] = None, num_qubits: int = 3) -> Dict[str, Any]:
     """Create a GHZ state circuit.
-    
+
     Args:
+        filename: Optional filename for the .qasm file. If provided, the circuit is saved to this file.
+                  If not provided, the circuit is only verified and visualized without saving.
         num_qubits: Number of qubits in the circuit (default: 3)
-    
+
     Returns:
-        Dictionary containing the circuit definition and visualization
+        Dictionary containing the verification status, ASCII circuit diagram, and file path (if saved)
     """
     try:
-        # Create the circuit definition
-        gates = [Gate(name='h', qubits=[0])]
+        # Create GHZ circuit using Qiskit
+        circuit = QiskitCircuit(num_qubits)
+        circuit.h(0)  # Hadamard on qubit 0
         for i in range(num_qubits - 1):
-            gates.append(Gate(name='cx', qubits=[i, i + 1]))
-        gates.append(Gate(name='measure_all'))
-        
-        circuit_def = QuantumCircuit(
-            num_qubits=num_qubits,
-            gates=gates,
-        )
-        
-        # Create visualization
-        response = get_braket_service().create_circuit_visualization(
-            circuit_def, "ghz"
-        )
-        
-        return response
+            circuit.cx(i, i + 1)  # Chain of CNOT gates
+        circuit.measure_all()  # Add measurements
+
+        # Convert to QASM 3.0
+        qasm_program = qasm3.dumps(circuit)
+
+        # Call create_quantum_circuit to verify and save
+        return create_quantum_circuit(qasm_program, filename)
     except Exception as e:
         logger.exception(f"Error creating GHZ circuit: {str(e)}")
-        return {'error': str(e)}
+        return {'error': str(e), 'success': False}
 
 
 @mcp.tool(name='create_qft_circuit')
-def create_qft_circuit(num_qubits: int = 3) -> Dict[str, Any]:
+def create_qft_circuit(filename: Optional[str] = None, num_qubits: int = 3) -> Dict[str, Any]:
     """Create a Quantum Fourier Transform circuit.
-    
+
     Args:
+        filename: Optional filename for the .qasm file. If provided, the circuit is saved to this file.
+                  If not provided, the circuit is only verified and visualized without saving.
         num_qubits: Number of qubits in the circuit (default: 3)
-    
+
     Returns:
-        Dictionary containing the circuit definition and visualization
+        Dictionary containing the verification status, ASCII circuit diagram, and file path (if saved)
     """
     try:
-        # Create a simplified circuit definition (actual QFT is more complex)
-        circuit_def = QuantumCircuit(
-            num_qubits=num_qubits,
-            gates=[Gate(name='qft', qubits=list(range(num_qubits))), Gate(name='measure_all')],
-            metadata={'description': 'Quantum Fourier Transform'},
-        )
-        
-        # Create visualization
-        response = get_braket_service().create_circuit_visualization(
-            circuit_def, "qft"
-        )
-        
-        return response
+        # Create QFT circuit using Qiskit
+        circuit = QiskitCircuit(num_qubits)
+
+        # Implement QFT algorithm
+        import math
+        for i in range(num_qubits):
+            # Apply Hadamard gate
+            circuit.h(i)
+            # Apply controlled-phase rotations
+            for j in range(i + 1, num_qubits):
+                angle = 2 * math.pi / (2 ** (j - i + 1))
+                circuit.cp(angle, j, i)
+
+        # Reverse qubit order with SWAP gates
+        for i in range(num_qubits // 2):
+            circuit.swap(i, num_qubits - i - 1)
+
+        circuit.measure_all()  # Add measurements
+
+        # Convert to QASM 3.0
+        qasm_program = qasm3.dumps(circuit)
+
+        # Call create_quantum_circuit to verify and save
+        return create_quantum_circuit(qasm_program, filename)
     except Exception as e:
         logger.exception(f"Error creating QFT circuit: {str(e)}")
-        return {'error': str(e)}
+        return {'error': str(e), 'success': False}
 
 
-@mcp.tool(name='visualize_circuit')
-def visualize_circuit(circuit: Dict[str, Any]) -> Dict[str, Any]:
-    """Visualize a quantum circuit.
+# @mcp.tool(name='visualize_circuit')
+# def visualize_circuit(circuit: Dict[str, Any]) -> Dict[str, Any]:
+#     """Visualize a quantum circuit.
     
-    Args:
-        circuit: Quantum circuit definition
+#     Args:
+#         circuit: Quantum circuit definition
     
-    Returns:
-        Dictionary containing the visualization
-    """
-    try:
-        # Convert the circuit dictionary to a QuantumCircuit object
-        gate_objects = []
-        for gate_dict in circuit.get('gates', []):
-            gate = Gate(
-                name=gate_dict.get('name'),
-                qubits=gate_dict.get('qubits', []),
-                params=gate_dict.get('params'),
-            )
-            gate_objects.append(gate)
+#     Returns:
+#         Dictionary containing the visualization
+#     """
+#     try:
+#         # Convert the circuit dictionary to a QuantumCircuit object
+#         gate_objects = []
+#         for gate_dict in circuit.get('gates', []):
+#             gate = Gate(
+#                 name=gate_dict.get('name'),
+#                 qubits=gate_dict.get('qubits', []),
+#                 params=gate_dict.get('params'),
+#             )
+#             gate_objects.append(gate)
         
-        circuit_def = QuantumCircuit(
-            num_qubits=circuit.get('num_qubits'),
-            gates=gate_objects,
-            metadata=circuit.get('metadata'),
-        )
+#         circuit_def = QuantumCircuit(
+#             num_qubits=circuit.get('num_qubits'),
+#             gates=gate_objects,
+#             metadata=circuit.get('metadata'),
+#         )
         
-        # Visualize the circuit
-        circuit_image = get_braket_service().visualize_circuit(circuit_def)
+#         # Visualize the circuit
+#         circuit_image = get_braket_service().visualize_circuit(circuit_def)
         
-        return {
-            'visualization': circuit_image,
-        }
-    except Exception as e:
-        logger.exception(f"Error visualizing circuit: {str(e)}")
-        return {'error': str(e)}
+#         return {
+#             'visualization': circuit_image,
+#         }
+#     except Exception as e:
+#         logger.exception(f"Error visualizing circuit: {str(e)}")
+#         return {'error': str(e)}
 
 
 @mcp.tool(name='visualize_results')

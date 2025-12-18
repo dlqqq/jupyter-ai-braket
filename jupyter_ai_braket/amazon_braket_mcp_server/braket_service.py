@@ -526,48 +526,48 @@ class BraketService:
             logger.exception(f"Error searching quantum tasks: {str(e)}")
             raise TaskExecutionError(f"Error searching quantum tasks: {str(e)}")
 
-    def visualize_circuit(self, circuit: Union[QiskitCircuit, QuantumCircuit]) -> str:
-        """Visualize a quantum circuit.
+    # def visualize_circuit(self, circuit: Union[QiskitCircuit, QuantumCircuit]) -> str:
+    #     """Visualize a quantum circuit.
 
-        Args:
-            circuit: Quantum circuit to visualize (Qiskit or circuit definition)
+    #     Args:
+    #         circuit: Quantum circuit to visualize (Qiskit or circuit definition)
 
-        Returns:
-            str: Base64-encoded PNG image of the circuit
+    #     Returns:
+    #         str: Base64-encoded PNG image of the circuit
 
-        Raises:
-            CircuitCreationError: If there is an error visualizing the circuit
-        """
-        try:
-            # Check if matplotlib is available
-            try:
-                import matplotlib.pyplot as plt
-                import matplotlib
-                matplotlib.use('Agg')
-            except ImportError:
-                raise CircuitCreationError("matplotlib is required for circuit visualization. Please install it with: pip install matplotlib")
+    #     Raises:
+    #         CircuitCreationError: If there is an error visualizing the circuit
+    #     """
+    #     try:
+    #         # Check if matplotlib is available
+    #         try:
+    #             import matplotlib.pyplot as plt
+    #             import matplotlib
+    #             matplotlib.use('Agg')
+    #         except ImportError:
+    #             raise CircuitCreationError("matplotlib is required for circuit visualization. Please install it with: pip install matplotlib")
             
-            # Convert circuit if needed
-            qiskit_circuit = None
-            if isinstance(circuit, QuantumCircuit):
-                qiskit_circuit = self.create_qiskit_circuit(circuit)
-            elif isinstance(circuit, QiskitCircuit):
-                qiskit_circuit = circuit
-            else:
-                raise CircuitCreationError(f"Unsupported circuit type for visualization: {type(circuit)}")
+    #         # Convert circuit if needed
+    #         qiskit_circuit = None
+    #         if isinstance(circuit, QuantumCircuit):
+    #             qiskit_circuit = self.create_qiskit_circuit(circuit)
+    #         elif isinstance(circuit, QiskitCircuit):
+    #             qiskit_circuit = circuit
+    #         else:
+    #             raise CircuitCreationError(f"Unsupported circuit type for visualization: {type(circuit)}")
             
-            # Draw the circuit
-            img_data = io.BytesIO()
-            circuit_drawer(qiskit_circuit, output='mpl', filename=img_data, interactive=False)
-            img_data.seek(0)
+    #         # Draw the circuit
+    #         img_data = io.BytesIO()
+    #         circuit_drawer(qiskit_circuit, output='mpl', filename=img_data, interactive=False)
+    #         img_data.seek(0)
             
-            # Convert to base64
-            base64_image = base64.b64encode(img_data.read()).decode('utf-8')
+    #         # Convert to base64
+    #         base64_image = base64.b64encode(img_data.read()).decode('utf-8')
             
-            return base64_image
-        except Exception as e:
-            logger.exception(f"Error visualizing circuit: {str(e)}")
-            raise CircuitCreationError(f"Error visualizing circuit: {str(e)}")
+    #         return base64_image
+    #     except Exception as e:
+    #         logger.exception(f"Error visualizing circuit: {str(e)}")
+    #         raise CircuitCreationError(f"Error visualizing circuit: {str(e)}")
 
     def create_bell_pair_circuit(self) -> QiskitCircuit:
         """Create a Bell pair circuit (entangled qubits).

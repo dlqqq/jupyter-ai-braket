@@ -4,6 +4,7 @@ from langchain.agents import create_agent
 from langchain_aws import ChatBedrockConverse
 from botocore.exceptions import ClientError
 import os
+from .system_prompt import BRAKET_SYS_PROMPT_TEMPLATE
 
 from langchain_mcp_adapters.client import MultiServerMCPClient  
 
@@ -80,7 +81,7 @@ class BraketPersona(BasePersona):
         tools = await client.get_tools()
 
         # 3. Initialize agent w/ MCP server tools
-        system_prompt = "You are an AI assistant designed to help AWS Braket users with quantum computing tasks."
+        system_prompt = BRAKET_SYS_PROMPT_TEMPLATE
         agent = create_agent(
             model,
             system_prompt=system_prompt,
@@ -119,6 +120,5 @@ class BraketPersona(BasePersona):
 
         response_aiter = create_aiter()
         await self.stream_message(response_aiter)
-    
 
     
