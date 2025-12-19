@@ -76,6 +76,7 @@ build-function = "hatch_jupyter_builder.npm_builder"
 ensured-targets = [
     "jupyter_ai_braket/labextension/static/style.js",
     "jupyter_ai_braket/labextension/package.json",
+    "jupyter_ai_braket/static/braket_icon.svg",
 ]
 skip-if-exists = ["jupyter_ai_braket/labextension/static/style.js"]
 
