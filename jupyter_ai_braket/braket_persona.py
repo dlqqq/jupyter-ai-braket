@@ -50,7 +50,7 @@ class BraketPersona(BasePersona):
                 # 
                 # See: https://github.com/langchain-ai/langchain-aws/blob/f2dac4838c6cc7acbda10b72aca115ae9838bfd2/libs/aws/langchain_aws/utils.py#L177-L178
                 # And the definition of `boto3.client()`.
-                credentials_profile_name="default"
+                # credentials_profile_name="default"
             )
         except ValueError as e:
             emsg = str(e)
