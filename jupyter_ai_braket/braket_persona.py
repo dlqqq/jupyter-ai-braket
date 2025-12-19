@@ -6,7 +6,10 @@ from botocore.exceptions import ClientError
 import os
 from .system_prompt import BRAKET_SYS_PROMPT_TEMPLATE
 
-from langchain_mcp_adapters.client import MultiServerMCPClient  
+from asyncio import Task
+from langchain_mcp_adapters.client import MultiServerMCPClient, ClientSession
+from langchain_mcp_adapters.tools import load_mcp_tools, BaseTool
+from contextlib import AsyncExitStack
 
 AVATAR_PATH = os.path.join(os.path.dirname(__file__), "static", "braket_icon.svg")
 
@@ -25,8 +28,44 @@ class BraketPersona(BasePersona):
     An AI persona designed to assist AWS Braket users with quantum computing tasks.
     """
 
+    mcp_client: MultiServerMCPClient
+    exit_stack: AsyncExitStack
+    # _mcp_session_cm: 
+    _mcp_session_task: Task[ClientSession]
+    _tools: list[BaseTool] | None
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.mcp_client = MultiServerMCPClient(  
+            {
+                "amazon_braket_mcp_server": {
+                    "transport": "stdio",
+                    "command": "python",
+                    "args": ["-m", "jupyter_ai_braket.amazon_braket_mcp_server.server"],
+                },
+            }
+        )
+        self.exit_stack = AsyncExitStack()
+        self._mcp_session_task = self.parent.event_loop.create_task(self._init_mcp_session())
+        self._tools = None
+
+    async def _init_mcp_session(self) -> ClientSession:
+        """
+        Background task that initializes the MCP session and sets the list of
+        tools in the `self._tools` instance attribute.
+        """
+        session_cm = self.mcp_client.session("amazon_braket_mcp_server")
+        # From here:
+        # https://modelcontextprotocol.io/docs/develop/build-client#server-connection-management
+        # Do not call __aenter__() on the CM directly; it does not work.
+        session = await self.exit_stack.enter_async_context(session_cm)
+        self.log.info(f"Successfully created MCP session for Braket persona: '{session}'.")
+        self._tools = await load_mcp_tools(session)
+        return session
+
+    async def get_mcp_tools(self) -> list[BaseTool]:
+        await self._mcp_session_task
+        return self._tools
     
     @property
     def defaults(self) -> PersonaDefaults:
@@ -68,17 +107,8 @@ class BraketPersona(BasePersona):
             self.log.error(e)
             self.send_message(f"Unknown error:\n```{str(e)}\n```\n")
 
-        # 2. Initialize MCP server and get tools
-        client = MultiServerMCPClient(  
-            {
-                "amazon_braket_mcp_server": {
-                    "transport": "stdio",
-                    "command": "python",
-                    "args": ["-m", "jupyter_ai_braket.amazon_braket_mcp_server.server"],
-                },
-            }
-        )
-        tools = await client.get_tools()
+        # 2. Get MCP tools from server session
+        tools = await self.get_mcp_tools()
 
         # 3. Initialize agent w/ MCP server tools
         system_prompt = BRAKET_SYS_PROMPT_TEMPLATE
@@ -120,5 +150,10 @@ class BraketPersona(BasePersona):
 
         response_aiter = create_aiter()
         await self.stream_message(response_aiter)
+    
+    def shutdown(self):
+        super().shutdown()
+        self.parent.event_loop.create_task(self.exit_stack.aclose())
+        self.log.info("Shut down MCP server session for Braket persona.")
 
     
