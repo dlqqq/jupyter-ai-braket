@@ -36,12 +36,28 @@ class BraketPersona(BasePersona):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.mcp_client = MultiServerMCPClient(  
+
+        # Build environment variables to pass to MCP server subprocess
+        mcp_env = {}
+        if "AWS_REGION" in os.environ:
+            mcp_env["AWS_REGION"] = os.environ["AWS_REGION"]
+            self.log.info(f"AWS_REGION: {os.environ['AWS_REGION']}")
+        else:
+            self.log.info("AWS_REGION: not set")
+
+        if "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI" in os.environ:
+            mcp_env["AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"] = os.environ["AWS_CONTAINER_CREDENTIALS_RELATIVE_URI"]
+            self.log.info(f"AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: {os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']}")
+        else:
+            self.log.info("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: not set")
+
+        self.mcp_client = MultiServerMCPClient(
             {
                 "amazon_braket_mcp_server": {
                     "transport": "stdio",
                     "command": "python",
                     "args": ["-m", "jupyter_ai_braket.amazon_braket_mcp_server.server"],
+                    "env": mcp_env,
                 },
             }
         )

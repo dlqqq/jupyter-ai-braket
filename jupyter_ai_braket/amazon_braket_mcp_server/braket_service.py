@@ -22,6 +22,7 @@ using both Qiskit and Amazon Braket SDK.
 import io
 import json
 import base64
+import os
 import boto3
 import numpy as np
 from datetime import datetime, timedelta
@@ -85,6 +86,17 @@ class BraketService:
         Raises:
             ValueError: If the specified region doesn't support Amazon Braket
         """
+        # Log AWS environment variables
+        if "AWS_REGION" in os.environ:
+            logger.info(f"AWS_REGION: {os.environ['AWS_REGION']}")
+        else:
+            logger.info("AWS_REGION: not set")
+
+        if "AWS_CONTAINER_CREDENTIALS_RELATIVE_URI" in os.environ:
+            logger.info(f"AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: {os.environ['AWS_CONTAINER_CREDENTIALS_RELATIVE_URI']}")
+        else:
+            logger.info("AWS_CONTAINER_CREDENTIALS_RELATIVE_URI: not set")
+
         # Get the actual region being used
         if region_name is None:
             # Try to get region from boto3 session

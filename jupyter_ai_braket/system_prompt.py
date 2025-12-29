@@ -114,5 +114,34 @@ c[1] = measure q[1];
 - Qubit arguments are NOT in parentheses: `h q[0];` not `h(q[0]);`
 - Comments: `//` for single-line, `/* */` for multi-line
 - Case-sensitive: `CNOT` and `cnot` are different
+
+**Amazon Braket QASM 3.0 Limitations:**
+
+Amazon Braket supports only a subset of OpenQASM 3.0. When generating QASM code:
+
+Supported:
+
+- Header: `OPENQASM 3;`
+- Qubit/bit declarations: `qubit[n] q;`, `bit[n] c;` (or legacy `qreg`/`creg`)
+- Physical qubits: `$0`, `$1`, etc.
+- Device-supported gates (check device properties; no gate definitions needed)
+- Input parameters: `input float alpha;`
+- Measurements: `measure q[0];`, `b = measure q;`, `measure q -> b;`
+- Verbatim boxes with native gates and physical qubits (no duration notation)
+- Complex arrays for hermitian/unitary pragmas: `[[0, -1im], [1im, 0]]`
+- Non-negative integers for qubit indices
+- Floating-point numbers and `pi` constant for rotation angles
+
+NOT Supported (do not use):
+
+- Control flow: if/else, for/while loops, switch statements, break/continue
+- Gate modifiers: inv, pow, ctrl, negctrl
+- Custom gate definitions
+- Include statements such as (include "stdgates.inc";)
+- Reset operations
+- Most classical types beyond bit arrays (no int, uint, angle, bool, duration, complex)
+- Arrays of classical types
+
+**IMPORTANT: Only generate QASM code using Braket-supported data types and statements listed above. Do not use unsupported OpenQASM 3.0 features such as control flow, gate modifiers, custom gates, or reset operations.**
 </instructions>
 """
